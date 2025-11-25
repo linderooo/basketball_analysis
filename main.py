@@ -5,6 +5,7 @@ import logging
 import cv2
 from utils import read_video, save_video, is_youtube_url, download_youtube_video, cleanup_downloaded_video, read_video_in_batches
 from utils.youtube_utils import parse_timestamp
+from utils.data_streamer import TacticalDataStreamer
 from tqdm import tqdm
 from trackers import PlayerTracker, BallTracker
 from team_assigner import TeamAssigner
@@ -52,8 +53,8 @@ Examples:
     )
     
     # Logging
-    parser.add_argument('--log-file', type=str, default=None,
-                        help='Log file path for verbose output (default: print to console)')
+    parser.add_argument('--log-file', type=str, default='basketball_analysis.log',
+                        help='Log file path for verbose output (default: basketball_analysis.log)')
     parser.add_argument('--verbose', action='store_true',
                         help='Enable verbose logging')
     parser.add_argument('--device', type=str, choices=['cpu', 'cuda', 'mps'], default='cpu',
@@ -90,24 +91,16 @@ def setup_logging(args):
     log_level = logging.DEBUG if args.verbose else logging.INFO
     log_format = '%(asctime)s - %(levelname)s - %(message)s'
     
-    if args.log_file:
-        # Log to file
-        logging.basicConfig(
-            level=log_level,
-            format=log_format,
-            handlers=[
-                logging.FileHandler(args.log_file),
-                logging.StreamHandler(sys.stdout)  # Also print to console
-            ]
-        )
-        logging.info(f"Logging to file: {args.log_file}")
-    else:
-        # Log to console only
-        logging.basicConfig(
-            level=log_level,
-            format=log_format,
-            handlers=[logging.StreamHandler(sys.stdout)]
-        )
+    # Always log to file and console
+    logging.basicConfig(
+        level=log_level,
+        format=log_format,
+        handlers=[
+            logging.FileHandler(args.log_file),
+            logging.StreamHandler(sys.stdout)
+        ]
+    )
+    logging.info(f"Logging to file: {args.log_file}")
 
 def main():
     args = parse_args()
@@ -123,15 +116,15 @@ def main():
     
     # Detect and display available hardware acceleration
     import torch
-    print("\n🔍 Hardware Detection:")
-    print(f"   CPU: ✅ Available")
+    # print("\n🔍 Hardware Detection:")
+    # print(f"   CPU: ✅ Available")
     cuda_available = torch.cuda.is_available()
     mps_available = torch.backends.mps.is_available()
-    print(f"   CUDA (NVIDIA GPU): {'✅ Available' if cuda_available else '❌ Not available'}")
-    if cuda_available:
-        print(f"      └─ {torch.cuda.get_device_name(0)} ({torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB)")
-    print(f"   MPS (Apple Silicon): {'✅ Available' if mps_available else '❌ Not available'}")
-    print()
+    # print(f"   CUDA (NVIDIA GPU): {'✅ Available' if cuda_available else '❌ Not available'}")
+    # if cuda_available:
+    #     print(f"      └─ {torch.cuda.get_device_name(0)} ({torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB)")
+    # print(f"   MPS (Apple Silicon): {'✅ Available' if mps_available else '❌ Not available'}")
+    # print()
     
     # Determine input source and video path
     video_path = None
@@ -175,7 +168,7 @@ def main():
         # Use video title (sanitized) for output filename
         from utils.youtube_utils import sanitize_filename
         safe_title = sanitize_filename(video_title)
-        args.output_video = os.path.join('output_videos', f'{safe_title}_output.mov')
+        args.output_video = os.path.join('output_videos', f'{safe_title}_output.mkv')
     
     # Check if model files exist
     missing_models = []
@@ -214,8 +207,11 @@ def main():
     team_ball_control_drawer = TeamBallControlDrawer()
     frame_number_drawer = FrameNumberDrawer()
     pass_and_interceptions_drawer = PassInterceptionDrawer()
-    tactical_view_drawer = TacticalViewDrawer()
+    # tactical_view_drawer = TacticalViewDrawer()
     speed_and_distance_drawer = SpeedAndDistanceDrawer()
+    
+    # Initialize Data Streamer
+    tactical_streamer = TacticalDataStreamer(os.path.join('output_videos', 'tactical_data.jsonl'))
 
     print(f"🎬 Processing: {video_title}")
     print(f"💾 Output will be saved to: {args.output_video}")
@@ -230,8 +226,9 @@ def main():
         # T4 GPU has 16GB VRAM - use larger batches
         BATCH_SIZE = 50  # Process fewer frames to avoid OOM
         if torch.cuda.is_available():
-            print(f"🚀 GPU mode enabled: {torch.cuda.get_device_name(0)}")
-            print(f"   GPU Memory: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB")
+            pass
+            # print(f"🚀 GPU mode enabled: {torch.cuda.get_device_name(0)}")
+            # print(f"   GPU Memory: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB")
         else:
             print("⚠️  CUDA requested but not available. Falling back to CPU mode.")
             BATCH_SIZE = 30
@@ -240,15 +237,16 @@ def main():
         # Apple M-series with unified memory - moderate batches
         BATCH_SIZE = 100  # Process moderate frames with Apple GPU
         if torch.backends.mps.is_available():
-            print("🍎 Apple Silicon GPU (MPS) mode enabled")
-            print(f"   Device: {torch.backends.mps.device if hasattr(torch.backends.mps, 'device') else 'MPS'}")
+            pass
+            # print("🍎 Apple Silicon GPU (MPS) mode enabled")
+            # print(f"   Device: {torch.backends.mps.device if hasattr(torch.backends.mps, 'device') else 'MPS'}")
         else:
             print("⚠️  MPS requested but not available. Falling back to CPU mode.")
             BATCH_SIZE = 30
     else:
         # CPU mode - conservative for low memory (< 2GB)
         BATCH_SIZE = 30  # Process 30 frames at a time to keep memory under 2GB
-        print("💻 CPU mode: Using small batches for low memory usage")
+        # print("💻 CPU mode: Using small batches for low memory usage")
     
     # Initialize video writer (we need the first frame to set it up)
     video_writer = None
@@ -277,7 +275,7 @@ def main():
 
     
     # Initialize progress bar
-    pbar = tqdm(total=total_frames_to_process, desc="Processing Video", unit="frames")
+    pbar = tqdm(total=total_frames_to_process, desc="Processing Video", unit="frames", dynamic_ncols=True, position=0, leave=True)
     
     for batch_idx, video_frames in enumerate(batch_generator):
         # Update progress bar instead of printing batch info
@@ -287,7 +285,7 @@ def main():
         if video_writer is None and len(video_frames) > 0:
             if not os.path.exists(os.path.dirname(args.output_video)):
                 os.makedirs(os.path.dirname(args.output_video))
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # MOV format for macOS
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # MKV format for streaming
             video_writer = cv2.VideoWriter(args.output_video, fourcc, 24, 
                                          (video_frames[0].shape[1], video_frames[0].shape[0]))
 
@@ -338,14 +336,15 @@ def main():
         output_video_frames = team_ball_control_drawer.draw(output_video_frames, player_assignment, ball_aquisition)
         output_video_frames = pass_and_interceptions_drawer.draw(output_video_frames, passes, interceptions)
         output_video_frames = speed_and_distance_drawer.draw(output_video_frames, player_tracks, player_distances_per_frame, player_speed_per_frame)
-        output_video_frames = tactical_view_drawer.draw(output_video_frames,
-                                                        tactical_view_converter.court_image_path,
-                                                        tactical_view_converter.width,
-                                                        tactical_view_converter.height,
-                                                        tactical_view_converter.key_points,
-                                                        tactical_player_positions,
-                                                        player_assignment,
-                                                        ball_aquisition)
+        
+        # Stream tactical data instead of drawing it on video
+        # output_video_frames = tactical_view_drawer.draw(output_video_frames, ...)
+        
+        # We need to write data for each frame in the batch
+        for i in range(len(video_frames)):
+            # Calculate global frame index if needed, but for now we just pass batch-relative index
+            # Note: The streamer expects batch-relative indices for the data lists we have
+            tactical_streamer.write_frame(i, tactical_player_positions, player_assignment, ball_aquisition)
                                                         
         # Write frames to video
         for frame in output_video_frames:
