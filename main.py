@@ -2,6 +2,7 @@ import os
 import argparse
 import sys
 import logging
+import cv2
 from utils import read_video, save_video, is_youtube_url, download_youtube_video, cleanup_downloaded_video, read_video_in_batches
 from utils.youtube_utils import parse_timestamp
 from tqdm import tqdm
@@ -273,7 +274,7 @@ def main():
     
     total_frames_processed = 0
     
-    import cv2
+
     
     # Initialize progress bar
     pbar = tqdm(total=total_frames_to_process, desc="Processing Video", unit="frames")
