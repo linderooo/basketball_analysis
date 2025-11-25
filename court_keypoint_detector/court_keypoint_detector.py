@@ -33,7 +33,9 @@ class CourtKeypointDetector:
             if len(court_keypoints) == len(frames):
                 return court_keypoints
         
-        batch_size=20  # Reduced for low memory usage
+        # Adaptive batch size based on available hardware
+        import torch
+        batch_size = 100 if torch.cuda.is_available() else 20
         court_keypoints = []
         for i in range(0,len(frames),batch_size):
             detections_batch = self.model.predict(frames[i:i+batch_size],conf=0.5)

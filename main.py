@@ -54,6 +54,8 @@ Examples:
                         help='Log file path for verbose output (default: print to console)')
     parser.add_argument('--verbose', action='store_true',
                         help='Enable verbose logging')
+    parser.add_argument('--device', type=str, choices=['cpu', 'cuda'], default='cpu',
+                        help='Device to use for processing: cpu (low memory) or cuda (GPU acceleration)')
     
     # Video source (mutually exclusive)
     video_source = parser.add_mutually_exclusive_group(required=True)
@@ -184,8 +186,21 @@ def main():
     start_sec = parse_timestamp(args.start_time) if args.start_time else None
     end_sec = parse_timestamp(args.end_time) if args.end_time else None
     
-    # Batch processing setup - optimized for low memory (< 2GB)
-    BATCH_SIZE = 30  # Process 30 frames at a time to keep memory under 2GB
+    # Batch processing setup - adaptive based on hardware
+    if args.device == 'cuda':
+        import torch
+        # T4 GPU has 16GB VRAM - use larger batches
+        BATCH_SIZE = 150  # Process more frames with GPU
+        if torch.cuda.is_available():
+            print(f"🚀 GPU mode enabled: {torch.cuda.get_device_name(0)}")
+            print(f"   GPU Memory: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB")
+        else:
+            print("⚠️  CUDA requested but not available. Falling back to CPU mode.")
+            BATCH_SIZE = 30
+    else:
+        # CPU mode - conservative for low memory (< 2GB)
+        BATCH_SIZE = 30  # Process 30 frames at a time to keep memory under 2GB
+        print("💻 CPU mode: Using small batches for low memory usage")
     
     # Initialize video writer (we need the first frame to set it up)
     video_writer = None
@@ -274,22 +289,21 @@ def main():
             
         total_frames_processed += len(video_frames)
         
-        # Aggressive memory cleanup to keep usage below 2GB
+        # Memory cleanup - delete all intermediate variables
         import gc
-        del video_frames
-        del output_video_frames
-        del player_tracks
-        del ball_tracks
-        del court_keypoints_per_frame
-        del tactical_player_positions
-        del player_assignment
-        del ball_aquisition
-        del passes
-        del interceptions
-        del player_speeds
-        del player_distances_per_frame
-        del player_speed_per_frame
-        gc.collect()  # Force garbage collection
+        # List of variables to clean up
+        cleanup_vars = [
+            'video_frames', 'output_video_frames', 'player_tracks', 'ball_tracks',
+            'court_keypoints_per_frame', 'tactical_player_positions', 'player_assignment',
+            'ball_aquisition', 'passes', 'interceptions', 'player_speeds',
+            'player_distances_per_frame', 'player_speed_per_frame'
+        ]
+        # Safely delete each variable
+        for var_name in cleanup_vars:
+            try:
+                exec(f'del {var_name}')
+            except: pass
+        gc.collect()
         
     if video_writer:
         video_writer.release()
