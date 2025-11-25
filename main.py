@@ -4,6 +4,7 @@ import sys
 import logging
 from utils import read_video, save_video, is_youtube_url, download_youtube_video, cleanup_downloaded_video, read_video_in_batches
 from utils.youtube_utils import parse_timestamp
+from tqdm import tqdm
 from trackers import PlayerTracker, BallTracker
 from team_assigner import TeamAssigner
 from court_keypoint_detector import CourtKeypointDetector
@@ -251,6 +252,22 @@ def main():
     # Initialize video writer (we need the first frame to set it up)
     video_writer = None
     
+    # Calculate total frames for progress bar
+    cap = cv2.VideoCapture(video_path)
+    total_frames_in_video = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    cap.release()
+    
+    start_frame = 0
+    if start_sec is not None:
+        start_frame = int(start_sec * fps)
+        
+    end_frame = total_frames_in_video
+    if end_sec is not None:
+        end_frame = int(end_sec * fps)
+        
+    total_frames_to_process = max(0, end_frame - start_frame)
+    
     # Use the batch generator
     batch_generator = read_video_in_batches(video_path, batch_size=BATCH_SIZE, start_time=start_sec, end_time=end_sec)
     
@@ -258,8 +275,12 @@ def main():
     
     import cv2
     
+    # Initialize progress bar
+    pbar = tqdm(total=total_frames_to_process, desc="Processing Video", unit="frames")
+    
     for batch_idx, video_frames in enumerate(batch_generator):
-        print(f"📦 Processing Batch {batch_idx+1} ({len(video_frames)} frames)...")
+        # Update progress bar instead of printing batch info
+        # print(f"📦 Processing Batch {batch_idx+1} ({len(video_frames)} frames)...")
         
         # Initialize video writer on first batch
         if video_writer is None and len(video_frames) > 0:
@@ -346,6 +367,10 @@ def main():
                 exec(f'del {var_name}')
             except: pass
         gc.collect()
+        
+        pbar.update(len(video_frames))
+        
+    pbar.close()
         
     if video_writer:
         video_writer.release()
