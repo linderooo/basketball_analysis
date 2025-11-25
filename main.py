@@ -54,8 +54,8 @@ Examples:
                         help='Log file path for verbose output (default: print to console)')
     parser.add_argument('--verbose', action='store_true',
                         help='Enable verbose logging')
-    parser.add_argument('--device', type=str, choices=['cpu', 'cuda'], default='cpu',
-                        help='Device to use for processing: cpu (low memory) or cuda (GPU acceleration)')
+    parser.add_argument('--device', type=str, choices=['cpu', 'cuda', 'mps'], default='cpu',
+                        help='Device: cpu (low memory), cuda (NVIDIA GPU), mps (Apple Silicon GPU)')
     
     # Video source (mutually exclusive)
     video_source = parser.add_mutually_exclusive_group(required=True)
@@ -109,6 +109,18 @@ def setup_logging(args):
 
 def main():
     args = parse_args()
+    
+    # Detect and display available hardware acceleration
+    import torch
+    print("\n🔍 Hardware Detection:")
+    print(f"   CPU: ✅ Available")
+    cuda_available = torch.cuda.is_available()
+    mps_available = torch.backends.mps.is_available()
+    print(f"   CUDA (NVIDIA GPU): {'✅ Available' if cuda_available else '❌ Not available'}")
+    if cuda_available:
+        print(f"      └─ {torch.cuda.get_device_name(0)} ({torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB)")
+    print(f"   MPS (Apple Silicon): {'✅ Available' if mps_available else '❌ Not available'}")
+    print()
     
     # Determine input source and video path
     video_path = None
@@ -182,7 +194,7 @@ def main():
     print(f"🎬 Processing: {video_title}")
     print(f"💾 Output will be saved to: {args.output_video}")
     
-    # Parse timestamps
+    # Parse timestamps if provided
     start_sec = parse_timestamp(args.start_time) if args.start_time else None
     end_sec = parse_timestamp(args.end_time) if args.end_time else None
     
@@ -196,6 +208,16 @@ def main():
             print(f"   GPU Memory: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB")
         else:
             print("⚠️  CUDA requested but not available. Falling back to CPU mode.")
+            BATCH_SIZE = 30
+    elif args.device == 'mps':
+        import torch
+        # Apple M-series with unified memory - moderate batches
+        BATCH_SIZE = 100  # Process moderate frames with Apple GPU
+        if torch.backends.mps.is_available():
+            print("🍎 Apple Silicon GPU (MPS) mode enabled")
+            print(f"   Device: {torch.backends.mps.device if hasattr(torch.backends.mps, 'device') else 'MPS'}")
+        else:
+            print("⚠️  MPS requested but not available. Falling back to CPU mode.")
             BATCH_SIZE = 30
     else:
         # CPU mode - conservative for low memory (< 2GB)

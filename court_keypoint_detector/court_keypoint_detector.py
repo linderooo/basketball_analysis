@@ -35,10 +35,19 @@ class CourtKeypointDetector:
         
         # Adaptive batch size based on available hardware
         import torch
-        batch_size = 100 if torch.cuda.is_available() else 20
+        if torch.cuda.is_available():
+            batch_size = 100  # CUDA GPU
+            device = 'cuda'
+        elif torch.backends.mps.is_available():
+            batch_size = 75   # Apple Silicon GPU
+            device = 'mps'
+        else:
+            batch_size = 20   # CPU
+            device = 'cpu'
+        
         court_keypoints = []
         for i in range(0,len(frames),batch_size):
-            detections_batch = self.model.predict(frames[i:i+batch_size],conf=0.5)
+            detections_batch = self.model.predict(frames[i:i+batch_size], conf=0.5, device=device)
             for detection in detections_batch:
                 court_keypoints.append(detection.keypoints)
 
