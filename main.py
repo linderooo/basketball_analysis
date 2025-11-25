@@ -211,7 +211,9 @@ def main():
     speed_and_distance_drawer = SpeedAndDistanceDrawer()
     
     # Initialize Data Streamer
-    tactical_streamer = TacticalDataStreamer(os.path.join('output_videos', 'tactical_data.jsonl'))
+    # Use a dynamic filename based on the video title to avoid permission errors/conflicts
+    jsonl_filename = f'{safe_title}_tactical.jsonl'
+    tactical_streamer = TacticalDataStreamer(os.path.join('output_videos', jsonl_filename))
 
     print(f"🎬 Processing: {video_title}")
     print(f"💾 Output will be saved to: {args.output_video}")
@@ -377,6 +379,8 @@ def main():
     
     print(f"✅ Analysis complete! Processed {total_frames_processed} frames.")
     print(f"📁 Output saved to: {args.output_video}")
+    print(f"📊 Tactical data saved to: output_videos/{jsonl_filename}")
+    print(f"👀 View visualization at: http://localhost:8000/index.html?file={jsonl_filename}")
     
     # Cleanup downloaded YouTube video if needed
     if cleanup_after and video_path:

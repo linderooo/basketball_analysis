@@ -1,7 +1,8 @@
 // Configuration
 const COURT_WIDTH = 800;
 const COURT_HEIGHT = 450; // Aspect ratio approx 1.77
-const DATA_FILE = '../output_videos/tactical_data.jsonl';
+const urlParams = new URLSearchParams(window.location.search);
+const DATA_FILE = '../output_videos/' + (urlParams.get('file') || 'tactical_data.jsonl');
 
 // Setup SVG
 const svg = d3.select("#court-container")
@@ -41,7 +42,7 @@ function drawCourt() {
         .attr("fill", "none")
         .attr("stroke", lineColor)
         .attr("stroke-width", lineWidth);
-        
+
     // Hoops (approximate positions)
     svg.append("circle")
         .attr("cx", 40)
@@ -73,7 +74,7 @@ async function fetchData() {
         const response = await fetch(DATA_FILE);
         const text = await response.text();
         const lines = text.trim().split('\n');
-        
+
         // Parse JSONL
         const newFrames = lines.map(line => {
             try {
@@ -114,7 +115,7 @@ function renderFrame(frameData) {
         // and we might need to scale. Let's assume 1:1 for now or scale if needed.
         // The converter uses 'tactical_view_converter.width' which seems to be hardcoded or derived.
         // Let's assume we need to scale x and y.
-        .attr("cx", d => d.x) 
+        .attr("cx", d => d.x)
         .attr("cy", d => d.y)
         .attr("fill", d => d.team === 1 ? "#fff" : "#1e90ff"); // White vs Blue
 
