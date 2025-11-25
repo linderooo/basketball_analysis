@@ -2,7 +2,7 @@ import os
 import argparse
 import sys
 import logging
-from utils import read_video, save_video, is_youtube_url, download_youtube_url, cleanup_downloaded_video, read_video_in_batches
+from utils import read_video, save_video, is_youtube_url, download_youtube_video, cleanup_downloaded_video, read_video_in_batches
 from utils.youtube_utils import parse_timestamp
 from trackers import PlayerTracker, BallTracker
 from team_assigner import TeamAssigner
@@ -184,8 +184,8 @@ def main():
     start_sec = parse_timestamp(args.start_time) if args.start_time else None
     end_sec = parse_timestamp(args.end_time) if args.end_time else None
     
-    # Batch processing setup
-    BATCH_SIZE = 100 # Process 100 frames at a time to save RAM
+    # Batch processing setup - optimized for low memory (< 2GB)
+    BATCH_SIZE = 30  # Process 30 frames at a time to keep memory under 2GB
     
     # Initialize video writer (we need the first frame to set it up)
     video_writer = None
@@ -274,11 +274,22 @@ def main():
             
         total_frames_processed += len(video_frames)
         
-        # Explicitly free memory
+        # Aggressive memory cleanup to keep usage below 2GB
+        import gc
         del video_frames
         del output_video_frames
         del player_tracks
         del ball_tracks
+        del court_keypoints_per_frame
+        del tactical_player_positions
+        del player_assignment
+        del ball_aquisition
+        del passes
+        del interceptions
+        del player_speeds
+        del player_distances_per_frame
+        del player_speed_per_frame
+        gc.collect()  # Force garbage collection
         
     if video_writer:
         video_writer.release()
