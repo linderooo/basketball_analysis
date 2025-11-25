@@ -132,6 +132,7 @@ class TeamAssigner:
                                                     player_id)
                 player_assignment[frame_num][player_id] = team
         
-        save_stub(stub_path,player_assignment)
+        if stub_path is not None:
+            save_stub(stub_path,player_assignment)
 
         return player_assignment

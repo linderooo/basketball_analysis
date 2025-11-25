@@ -41,35 +41,32 @@ Below is the final annotated output video.
 ## 🔧 Prerequisites
 
 - Python 3.8+
-- (Optional) Docker
+- OpenGL libraries (for OpenCV)
+  - **macOS**: Usually pre-installed
+  - **Ubuntu/Debian**: `sudo apt-get install libgl1-mesa-glx libglib2.0-0`
+  - **Windows**: Usually no additional setup needed
 
 ---
 
 ## ⚙️ Installation
 
-Setup your environment locally or via Docker.
+1. **Create a virtual environment** (recommended):
 
-### Python Environment
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
 
-1. Create a virtual environment (e.g., venv/conda).
-2. Install the required packages:
+2. **Install the required packages**:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### Docker
-
-#### Build the Docker image:
+3. **Create necessary directories** (if they don't exist):
 
 ```bash
-docker build -t basketball-analysis .
-```
-
-#### Verify the image:
-
-```bash
-docker images
+mkdir -p input_videos output_videos models
 ```
 
 ## 🎓 Training the Models
@@ -102,36 +99,53 @@ This repository relies on trained models for detecting basketballs, players, and
 
 ## 🚀 Usage
 
-You can run this repository’s core functionality (analysis pipeline) with Python or Docker.
+The application supports both local video files and YouTube videos, with optional timestamp ranges.
 
-### 1) Using Python Directly
+### Basic Usage
 
-Run the main entry point with your chosen video file:
-
+**Analyze local video file:**
 ```bash
-python main.py path_to_input_video.mp4 --output_video output_videos/output_result.avi
+python3 main.py --file input_videos/game.mp4
 ```
 
-- By default, intermediate “stubs” (pickled detection results) are used if found, allowing you to skip repeated detection/tracking.
-- Use the `--stub_path` flag to specify a custom stub folder, or disable stubs if you want to run everything fresh.
-
-### 2) Using Docker
-
-#### Build the container if not built already:
-
+**Analyze YouTube video:**
 ```bash
-docker build -t basketball-analysis .
+python3 main.py --youtube "https://www.youtube.com/watch?v=VIDEO_ID"
 ```
 
-#### Run the container, mounting your local input video folder:
+### Advanced Usage with Timestamps
 
+**Analyze specific segment of local video (2:00 to 5:30):**
 ```bash
-docker run \
-  -v $(pwd)/videos:/app/videos \
-  -v $(pwd)/output_videos:/app/output_videos \
-  basketball-analysis \
-  python main.py videos/input_video.mp4 --output_video output_videos/output_result.avi
+python3 main.py --file input_videos/game.mp4 --start-time 2:00 --end-time 5:30
 ```
+
+**Analyze YouTube video segment:**
+```bash
+python3 main.py --youtube "https://www.youtube.com/watch?v=VIDEO_ID" --start-time 1:30 --end-time 4:00
+```
+
+**Keep downloaded YouTube video:**
+```bash
+python3 main.py --youtube "URL" --keep-youtube
+```
+
+### All Options
+
+- `--file PATH`: Path to local video file
+- `--youtube URL`: YouTube video URL (mutually exclusive with --file)
+- `--start-time TIME`: Start time (formats: `HH:MM:SS`, `MM:SS`, or seconds)
+- `--end-time TIME`: End time (formats: `HH:MM:SS`, `MM:SS`, or seconds)
+- `--output_video PATH`: Custom output path (default: auto-generated)
+- `--stub_path PATH`: Stub directory for caching (default: `stubs/`)
+- `--keep-youtube`: Keep downloaded YouTube video after processing
+
+### Notes
+
+- **Timestamps** work for both local files and YouTube videos
+- **YouTube downloads** are automatically deleted after processing unless `--keep-youtube` is specified
+- **Stubs** (cached intermediate results) speed up repeated analysis
+- **Output naming** is automatic based on video title
 
 ---
 

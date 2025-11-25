@@ -31,7 +31,7 @@ class PlayerTracker:
         Returns:
             list: YOLO detection results for each frame.
         """
-        batch_size=20 
+        batch_size=50  # Optimized for Apple M3
         detections = [] 
         for i in range(0,len(frames),batch_size):
             detections_batch = self.model.predict(frames[i:i+batch_size],conf=0.5)
@@ -80,5 +80,6 @@ class PlayerTracker:
                 if cls_id == cls_names_inv['Player']:
                     tracks[frame_num][track_id] = {"bbox":bbox}
         
-        save_stub(stub_path,tracks)
+        if stub_path is not None:
+            save_stub(stub_path,tracks)
         return tracks

@@ -1,4 +1,11 @@
 __pycache__/
 *.pt
+*.mlpackage/
 *.avi
+*.mov
+*.mp4
 *.pkl
+
+# Video directories
+input_videos/
+output_videos/
