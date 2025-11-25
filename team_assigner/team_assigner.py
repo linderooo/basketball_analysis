@@ -41,7 +41,7 @@ class TeamAssigner:
         Loads the pre-trained vision model for jersey color classification.
         """
         self.model = CLIPModel.from_pretrained("patrickjohncyh/fashion-clip")
-        self.processor = CLIPProcessor.from_pretrained("patrickjohncyh/fashion-clip")
+        self.processor = CLIPProcessor.from_pretrained("patrickjohncyh/fashion-clip", use_fast=True)
 
     def get_player_color(self,frame,bbox):
         """
