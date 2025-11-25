@@ -1,11 +1,37 @@
-numpy==1.24.4
-opencv_python==4.9.0.80
-opencv_python_headless==4.8.0.74
-pandas==2.0.3
-Pillow==11.1.0
-roboflow==1.1.51
-supervision==0.25.1
-torch==2.2.0
-transformers==4.46.3
-ultralytics==8.3.67
-yt-dlp>=2025.11.12
+# Basketball Analysis Dependencies
+# For CPU-only systems, install directly: pip install -r requirements.txt
+# For GPU systems with CUDA, see GPU_INSTALL.md for instructions
+
+# Core ML frameworks
+# NOTE: For GPU/CUDA support, install PyTorch separately BEFORE running this file
+# See: https://pytorch.org/get-started/locally/
+# Example: pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
+
+# Object detection and tracking
+ultralytics>=8.0.0
+supervision>=0.16.0
+
+# Video processing
+opencv-python-headless>=4.6.0  # Use headless for servers without X11
+
+# YouTube downloads
+yt-dlp>=2023.0.0
+
+# ML models
+transformers>=4.30.0
+
+# Data processing
+pandas>=1.5.0
+numpy>=1.23.0
+scipy>=1.9.0
+
+# Utilities
+psutil>=5.8.0
+polars>=0.20.0
+
+# Visualization
+matplotlib>=3.5.0
+pillow>=9.0.0
+
+# Configuration
+pyyaml>=6.0
