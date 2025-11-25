@@ -1,7 +1,8 @@
 import os
 import argparse
 import sys
-from utils import read_video, save_video, is_youtube_url, download_youtube_video, cleanup_downloaded_video, read_video_in_batches
+import logging
+from utils import read_video, save_video, is_youtube_url, download_youtube_url, cleanup_downloaded_video, read_video_in_batches
 from utils.youtube_utils import parse_timestamp
 from trackers import PlayerTracker, BallTracker
 from team_assigner import TeamAssigner
@@ -48,11 +49,17 @@ Examples:
         '''
     )
     
-    # Create mutually exclusive group for input source
-    source_group = parser.add_mutually_exclusive_group(required=True)
-    source_group.add_argument('--file', type=str, metavar='PATH',
+    # Logging
+    parser.add_argument('--log-file', type=str, default=None,
+                        help='Log file path for verbose output (default: print to console)')
+    parser.add_argument('--verbose', action='store_true',
+                        help='Enable verbose logging')
+    
+    # Video source (mutually exclusive)
+    video_source = parser.add_mutually_exclusive_group(required=True)
+    video_source.add_argument('--file', type=str, metavar='PATH',
                               help='Path to local video file')
-    source_group.add_argument('--youtube', type=str, metavar='URL',
+    video_source.add_argument('--youtube', type=str, metavar='URL',
                               help='YouTube video URL')
     
     # Optional arguments
@@ -68,6 +75,35 @@ Examples:
                         help='Keep downloaded YouTube video (default: delete after processing)')
     
     return parser.parse_args()
+
+def setup_logging(args):
+    """
+    Configure logging based on command-line arguments.
+    
+    Args:
+        args: Parsed command-line arguments
+    """
+    log_level = logging.DEBUG if args.verbose else logging.INFO
+    log_format = '%(asctime)s - %(levelname)s - %(message)s'
+    
+    if args.log_file:
+        # Log to file
+        logging.basicConfig(
+            level=log_level,
+            format=log_format,
+            handlers=[
+                logging.FileHandler(args.log_file),
+                logging.StreamHandler(sys.stdout)  # Also print to console
+            ]
+        )
+        logging.info(f"Logging to file: {args.log_file}")
+    else:
+        # Log to console only
+        logging.basicConfig(
+            level=log_level,
+            format=log_format,
+            handlers=[logging.StreamHandler(sys.stdout)]
+        )
 
 def main():
     args = parse_args()
@@ -145,8 +181,8 @@ def main():
     print(f"💾 Output will be saved to: {args.output_video}")
     
     # Parse timestamps
-    start_sec = parse_timestamp(args.start_time)
-    end_sec = parse_timestamp(args.end_time)
+    start_sec = parse_timestamp(args.start_time) if args.start_time else None
+    end_sec = parse_timestamp(args.end_time) if args.end_time else None
     
     # Batch processing setup
     BATCH_SIZE = 100 # Process 100 frames at a time to save RAM

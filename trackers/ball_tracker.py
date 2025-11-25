@@ -131,6 +131,12 @@ class BallTracker:
             list: List of ball positions with interpolated values filling the gaps.
         """
         ball_positions = [x.get(1,{}).get('bbox',[]) for x in ball_positions]
+        
+        # Check if we have any ball detections at all
+        if not any(ball_positions):
+            # No ball detected in any frame, return empty positions
+            return [{} for _ in range(len(ball_positions))]
+        
         df_ball_positions = pd.DataFrame(ball_positions,columns=['x1','y1','x2','y2'])
 
         # Interpolate missing values
