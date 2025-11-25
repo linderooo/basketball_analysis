@@ -36,7 +36,7 @@ class CourtKeypointDetector:
         # Adaptive batch size based on available hardware
         import torch
         if torch.cuda.is_available():
-            batch_size = 100  # CUDA GPU
+            batch_size = 20  # CUDA GPU
             device = 'cuda'
         elif torch.backends.mps.is_available():
             batch_size = 75   # Apple Silicon GPU

@@ -217,7 +217,7 @@ def main():
     if args.device == 'cuda':
         import torch
         # T4 GPU has 16GB VRAM - use larger batches
-        BATCH_SIZE = 150  # Process more frames with GPU
+        BATCH_SIZE = 50  # Process fewer frames to avoid OOM
         if torch.cuda.is_available():
             print(f"🚀 GPU mode enabled: {torch.cuda.get_device_name(0)}")
             print(f"   GPU Memory: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB")
@@ -267,8 +267,13 @@ def main():
         
         # Note: We disable stubs for batch processing to ensure fresh tracking
         player_tracks = player_tracker.get_object_tracks(video_frames, read_from_stub=False)
+        if args.device == 'cuda': torch.cuda.empty_cache()
+        
         ball_tracks = ball_tracker.get_object_tracks(video_frames, read_from_stub=False)
+        if args.device == 'cuda': torch.cuda.empty_cache()
+        
         court_keypoints_per_frame = court_keypoint_detector.get_court_keypoints(video_frames, read_from_stub=False)
+        if args.device == 'cuda': torch.cuda.empty_cache()
         
         
         # 3. Ball Refinement
