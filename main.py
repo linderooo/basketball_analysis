@@ -262,22 +262,13 @@ def main():
 
         # --- Analysis Pipeline (Per Batch) ---
         
-        # 1. Parallel Object Detection (Optimized for Apple M3)
-        # Run player, ball, and court detection in parallel using ThreadPoolExecutor
-        # This bypasses GIL for I/O-bound YOLO inference
-        from concurrent.futures import ThreadPoolExecutor
+        # 1. Object Detection
+        # Run player, ball, and court detection sequentially to avoid OOM on GPU
         
         # Note: We disable stubs for batch processing to ensure fresh tracking
-        with ThreadPoolExecutor(max_workers=3) as executor:
-            # Submit all detection tasks in parallel
-            future_player = executor.submit(player_tracker.get_object_tracks, video_frames, False)
-            future_ball = executor.submit(ball_tracker.get_object_tracks, video_frames, False)
-            future_court = executor.submit(court_keypoint_detector.get_court_keypoints, video_frames, False)
-            
-            # Collect results
-            player_tracks = future_player.result()
-            ball_tracks = future_ball.result()
-            court_keypoints_per_frame = future_court.result()
+        player_tracks = player_tracker.get_object_tracks(video_frames, read_from_stub=False)
+        ball_tracks = ball_tracker.get_object_tracks(video_frames, read_from_stub=False)
+        court_keypoints_per_frame = court_keypoint_detector.get_court_keypoints(video_frames, read_from_stub=False)
         
         
         # 3. Ball Refinement
