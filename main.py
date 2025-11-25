@@ -110,6 +110,15 @@ def setup_logging(args):
 def main():
     args = parse_args()
     
+    # Force garbage collection and CUDA cache cleanup at startup
+    import gc
+    import torch
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        torch.cuda.ipc_collect()
+
+    
     # Detect and display available hardware acceleration
     import torch
     print("\n🔍 Hardware Detection:")
