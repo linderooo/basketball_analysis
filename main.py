@@ -166,6 +166,21 @@ def main():
         safe_title = sanitize_filename(video_title)
         args.output_video = os.path.join('output_videos', f'{safe_title}_output.mov')
     
+    # Check if model files exist
+    missing_models = []
+    for model_path in [PLAYER_DETECTOR_PATH, BALL_DETECTOR_PATH, COURT_KEYPOINT_DETECTOR_PATH]:
+        if not os.path.exists(model_path):
+            missing_models.append(model_path)
+    
+    if missing_models:
+        print("\n❌ Error: Missing model files!")
+        print("   The following models were not found:")
+        for path in missing_models:
+            print(f"   - {path}")
+        print("\n   Please download/transfer these models to the 'models/' directory.")
+        print("   If you are on a remote server, use 'scp' to upload them from your local machine.")
+        sys.exit(1)
+
     # Initialize Trackers and Detectors
     player_tracker = PlayerTracker(PLAYER_DETECTOR_PATH)
     ball_tracker = BallTracker(BALL_DETECTOR_PATH)
